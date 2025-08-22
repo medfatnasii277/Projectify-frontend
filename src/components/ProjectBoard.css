@@ -1,0 +1,105 @@
+.project-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 32px;
+  background: #f7f8fa;
+  min-height: 100vh;
+}
+
+.upload-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 24px 32px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.upload-section input[type="file"] {
+  font-size: 16px;
+}
+
+.upload-section button {
+  background: #0052cc;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.upload-section button:hover {
+  background: #0065ff;
+}
+
+.project {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 24px;
+  border-left: 6px solid #0052cc;
+}
+
+.project h2 {
+  margin-top: 0;
+  color: #0052cc;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.tasks {
+  margin-top: 18px;
+}
+
+.task {
+  margin-bottom: 18px;
+  background: #f4f6fb;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.task h3 {
+  margin: 0 0 8px 0;
+  color: #172b4d;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.subtask {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e1e4ea;
+}
+
+.subtask:last-child {
+  border-bottom: none;
+}
+
+.subtask span {
+  flex: 1;
+  color: #42526e;
+  font-size: 1rem;
+}
+
+.subtask select {
+  margin-left: 18px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #dfe1e6;
+  background: #fff;
+  font-size: 1rem;
+  color: #0052cc;
+  cursor: pointer;
+}
