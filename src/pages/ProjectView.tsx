@@ -28,12 +28,19 @@ export default function ProjectView() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStatus, setEditStatus] = useState('pending');
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetch(`http://localhost:5000/api/projects/${id}`)
         .then(res => res.json())
-        .then(data => setProject(data))
+        .then(data => {
+          setProject(data);
+          setEditDescription(data.description || '');
+          setEditStatus(data.status || 'pending');
+        })
         .catch(() => setProject(null));
     }
   }, [id]);
@@ -57,6 +64,20 @@ export default function ProjectView() {
     task.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleUpdate = async () => {
+    if (!id) return;
+    const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: editDescription, status: editStatus })
+    });
+    if (response.ok) {
+      const updated = await response.json();
+      setProject(updated);
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Navigation */}
@@ -77,9 +98,33 @@ export default function ProjectView() {
               <h1 className="text-3xl font-semibold text-foreground mb-2">
                 {project?.title || 'Untitled Project'}
               </h1>
-              <p className="text-muted-foreground">
-                {/* Placeholder for description */}
-              </p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editDescription}
+                    onChange={e => setEditDescription(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder="Project description..."
+                  />
+                  <select
+                    value={editStatus}
+                    onChange={e => setEditStatus(e.target.value)}
+                    className="p-2 border rounded"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="finished">Finished</option>
+                  </select>
+                  <button onClick={handleUpdate} className="mt-2 px-4 py-2 bg-primary text-white rounded">Submit</button>
+                  <button onClick={() => setIsEditing(false)} className="mt-2 ml-2 px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-muted-foreground">{project?.description || 'No description yet.'}</p>
+                  <span className="inline-block px-3 py-1 rounded bg-gray-200 text-sm">{project?.status || 'pending'}</span>
+                  <button onClick={() => setIsEditing(true)} className="ml-4 px-4 py-2 bg-primary text-white rounded">Edit</button>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center gap-6">
