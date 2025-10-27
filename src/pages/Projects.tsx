@@ -7,7 +7,7 @@ export default function Projects() {
   const [projects, setProjects] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/projects')
+    fetch('http://localhost:3000/api/projects')
       .then(res => res.json())
       .then(data => setProjects(Array.isArray(data) ? data : []));
   }, []);

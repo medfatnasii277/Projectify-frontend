@@ -16,10 +16,10 @@ import { cn } from "@/lib/utils";
 interface TaskItemProps {
   task: {
     id: string;
-    title: string;
+    name: string;
     description: string;
     priority: 'low' | 'medium' | 'high';
-    status: 'todo' | 'in-progress' | 'completed';
+    status: 'not-started' | 'in-progress' | 'completed';
     dueDate: string;
     assignee: {
       name: string;
@@ -42,7 +42,7 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
   };
 
   const statusColors = {
-    todo: 'bg-muted/50 text-muted-foreground',
+    'not-started': 'bg-muted/50 text-muted-foreground',
     'in-progress': 'bg-primary/10 text-primary',
     completed: 'bg-secondary/10 text-secondary'
   };
@@ -90,7 +90,7 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
               "font-medium text-foreground",
               isCompleted && "line-through text-muted-foreground"
             )}>
-              {task.title}
+              {task.name}
             </h3>
             
             {/* Action Buttons - Show on Hover */}

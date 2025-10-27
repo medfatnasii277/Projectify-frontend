@@ -34,7 +34,7 @@ export default function ProjectView() {
 
   useEffect(() => {
     if (id) {
-      fetch(`http://localhost:5000/api/projects/${id}`)
+      fetch(`http://localhost:3000/api/projects/${id}`)
         .then(res => res.json())
         .then(data => {
           setProject(data);
@@ -45,28 +45,31 @@ export default function ProjectView() {
     }
   }, [id]);
 
-  // Flatten mainTasks to match previous mockTasks structure
+  // Flatten mainTasks to match TaskDetailModal structure
   const tasks = project?.mainTasks?.map((task: any, idx: number) => ({
     id: String(idx),
-    title: task.name || 'Untitled Task',
-    description: '', // Placeholder
-    priority: 'medium', // Placeholder
-    status: 'todo', // Placeholder
+    projectId: id,
+    mainTaskIndex: idx,
+    name: task.name || 'Untitled Task',
+    description: task.description || '',
+    priority: task.priority || 'medium',
+    status: task.status || 'not-started',
     dueDate: '', // Placeholder
     assignee: { name: '', avatar: '' }, // Placeholder
-    subtasksCompleted: 0, // Placeholder
-    subtasksTotal: Array.isArray(task.subtasks) ? task.subtasks.length : 0,
     subtasks: task.subtasks || [],
+    comments: task.comments || [],
+    subtasksCompleted: Array.isArray(task.subtasks) ? task.subtasks.filter((s: any) => s.status === 'completed').length : 0,
+    subtasksTotal: Array.isArray(task.subtasks) ? task.subtasks.length : 0,
   })) || [];
 
   const selectedTask = tasks.find(task => task.id === selectedTaskId);
   const filteredTasks = tasks.filter(task =>
-    task.title.toLowerCase().includes(searchQuery.toLowerCase())
+    task.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleUpdate = async () => {
     if (!id) return;
-    const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+    const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: editDescription, status: editStatus })

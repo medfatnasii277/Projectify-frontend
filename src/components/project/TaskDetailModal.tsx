@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { X, Calendar, User, Flag, MessageCircle, Clock, Plus } from "lucide-react";
 import { 
   Dialog, 
@@ -24,17 +25,21 @@ import { cn } from "@/lib/utils";
 interface TaskDetailModalProps {
   task: {
     id: string;
-    title: string;
+    projectId: string;
+    mainTaskIndex: number;
+    name: string;
     description: string;
     priority: 'low' | 'medium' | 'high';
-    status: 'todo' | 'in-progress' | 'completed';
-    dueDate: string;
-    assignee: {
+    status: 'not-started' | 'in-progress' | 'completed';
+    dueDate?: string;
+    assignee?: {
       name: string;
       avatar: string;
     };
-    subtasksCompleted: number;
-    subtasksTotal: number;
+    subtasks?: any[];
+    comments?: any[];
+    subtasksCompleted?: number;
+    subtasksTotal?: number;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -66,8 +71,62 @@ const mockComments = [
 ];
 
 export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps) {
+  const [description, setDescription] = useState(task.description || '');
+  const [status, setStatus] = useState(task.status || 'not-started');
+  const [priority, setPriority] = useState(task.priority || 'medium');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [subtasks, setSubtasks] = useState<any[]>(task.subtasks || []);
+  const [comments, setComments] = useState<any[]>(task.comments || []);
   const [newComment, setNewComment] = useState('');
   const [newSubtask, setNewSubtask] = useState('');
+  const [loadingSubtasks, setLoadingSubtasks] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [subtaskError, setSubtaskError] = useState('');
+  const [commentError, setCommentError] = useState('');
+
+  useEffect(() => {
+    setDescription(task.description || '');
+    setStatus(task.status || 'not-started');
+    setPriority(task.priority || 'medium');
+    const normalizedSubtasks = (task.subtasks || []).map((sub: any) =>
+      typeof sub === 'string'
+        ? { name: sub, description: '', status: 'not-started', priority: 'medium' }
+        : sub
+    );
+    setSubtasks(normalizedSubtasks);
+    setComments(task.comments || []);
+    fetchComments();
+    // eslint-disable-next-line
+  }, [task]);
+
+  // Fetch subtasks from backend
+  const fetchSubtasks = async () => {
+    setLoadingSubtasks(true);
+    setSubtaskError('');
+    try {
+      // Subtasks are part of the project fetch, so just use task.subtasks
+      setSubtasks(task.subtasks || []);
+    } catch (err: any) {
+      setSubtaskError('Failed to load subtasks');
+    }
+    setLoadingSubtasks(false);
+  };
+
+  // Fetch comments from backend
+  const fetchComments = async () => {
+    setLoadingComments(true);
+    setCommentError('');
+    try {
+      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/comments`);
+      if (!res.ok) throw new Error('Failed to fetch comments');
+      const data = await res.json();
+      setComments(data);
+    } catch (err: any) {
+      setCommentError('Failed to load comments');
+    }
+    setLoadingComments(false);
+  };
 
   const priorityColors = {
     low: 'text-secondary border-secondary/20 bg-secondary/10',
@@ -77,12 +136,89 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
 
   const completionPercentage = (task.subtasksCompleted / task.subtasksTotal) * 100;
 
+  // Save handler
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    try {
+      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: task.name,
+          description,
+          status,
+          priority,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save changes');
+      setSaving(false);
+      onClose();
+    } catch (err: any) {
+      setSaveError(err.message || 'Error saving changes');
+      setSaving(false);
+    }
+  };
+
+  // Add subtask
+  const handleAddSubtask = async () => {
+    if (!newSubtask.trim()) return;
+    setSubtaskError('');
+    try {
+      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newSubtask }),
+      });
+      if (!res.ok) throw new Error('Failed to add subtask');
+      const data = await res.json();
+      setSubtasks(data);
+      setNewSubtask('');
+    } catch (err: any) {
+      setSubtaskError('Failed to add subtask');
+    }
+  };
+
+  // Remove subtask
+  const handleRemoveSubtask = async (subtaskIdx: number) => {
+    setSubtaskError('');
+    try {
+      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks/${subtaskIdx}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to remove subtask');
+      const data = await res.json();
+      setSubtasks(data);
+    } catch (err: any) {
+      setSubtaskError('Failed to remove subtask');
+    }
+  };
+
+  // Add comment
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    setCommentError('');
+    try {
+      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author: 'User', content: newComment }),
+      });
+      if (!res.ok) throw new Error('Failed to add comment');
+      const data = await res.json();
+      setComments(data);
+      setNewComment('');
+    } catch (err: any) {
+      setCommentError('Failed to add comment');
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-semibold text-foreground pr-8">
-            {task.title}
+            {task.name}
           </DialogTitle>
         </DialogHeader>
 
@@ -93,7 +229,8 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
             <div className="space-y-3">
               <h3 className="font-semibold text-foreground">Description</h3>
               <Textarea
-                defaultValue={task.description}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
                 className="min-h-[100px] resize-none"
                 placeholder="Add task description..."
               />
@@ -103,34 +240,50 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">
-                  Subtasks ({task.subtasksCompleted}/{task.subtasksTotal})
+                  Subtasks ({subtasks.filter(s => s.status === 'completed').length}/{subtasks.length})
                 </h3>
-                <Progress value={completionPercentage} className="w-24 h-2" />
+                <Progress value={subtasks.length ? (subtasks.filter(s => s.status === 'completed').length / subtasks.length) * 100 : 0} className="w-24 h-2" />
               </div>
-              
+              {subtaskError && <div className="text-red-500 text-sm">{subtaskError}</div>}
               <div className="space-y-3">
-                {mockSubtasks.map((subtask) => (
-                  <Card key={subtask.id} className="p-3">
+                {subtasks.map((subtask, idx) => (
+                  <Card key={idx} className="p-3">
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={subtask.completed}
+                        checked={subtask.status === 'completed'}
                         className="w-4 h-4 rounded border-border"
-                        onChange={() => {}}
+                        onChange={async () => {
+                          // Toggle subtask status
+                          const newStatus = subtask.status === 'completed' ? 'not-started' : 'completed';
+                          try {
+                            const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks/${idx}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ status: newStatus }),
+                            });
+                            if (!res.ok) throw new Error('Failed to update subtask');
+                            const data = await res.json();
+                            const updated = [...subtasks];
+                            updated[idx] = data;
+                            setSubtasks(updated);
+                          } catch {
+                            setSubtaskError('Failed to update subtask');
+                          }
+                        }}
                       />
                       <span className={cn(
                         "flex-1 text-sm",
-                        subtask.completed ? "line-through text-muted-foreground" : "text-foreground"
+                        subtask.status === 'completed' ? "line-through text-muted-foreground" : "text-foreground"
                       )}>
-                        {subtask.title}
+                        {subtask.name}
                       </span>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRemoveSubtask(idx)}>
                         <X className="w-3 h-3" />
                       </Button>
                     </div>
                   </Card>
                 ))}
-                
                 {/* Add Subtask */}
                 <div className="flex gap-2">
                   <Input
@@ -139,7 +292,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                     onChange={(e) => setNewSubtask(e.target.value)}
                     className="flex-1"
                   />
-                  <Button size="sm" className="btn-secondary">
+                  <Button size="sm" className="btn-secondary" onClick={handleAddSubtask}>
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
@@ -149,15 +302,15 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
             {/* Comments */}
             <div className="space-y-4">
               <h3 className="font-semibold text-foreground">
-                Comments ({mockComments.length})
+                Comments ({comments.length})
               </h3>
-              
+              {commentError && <div className="text-red-500 text-sm">{commentError}</div>}
               <div className="space-y-4">
-                {mockComments.map((comment) => (
-                  <Card key={comment.id} className="p-4">
+                {comments.map((comment, idx) => (
+                  <Card key={idx} className="p-4">
                     <div className="flex gap-3">
                       <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-sm font-medium text-white">
-                        {comment.avatar}
+                        {comment.author?.slice(0,2).toUpperCase()}
                       </div>
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
@@ -165,7 +318,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                             {comment.author}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {comment.timestamp}
+                            {comment.timestamp ? new Date(comment.timestamp).toLocaleString() : ''}
                           </span>
                         </div>
                         <p className="text-sm text-foreground">
@@ -175,7 +328,6 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                     </div>
                   </Card>
                 ))}
-                
                 {/* Add Comment */}
                 <div className="flex gap-2">
                   <Input
@@ -184,7 +336,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                     onChange={(e) => setNewComment(e.target.value)}
                     className="flex-1"
                   />
-                  <Button size="sm" className="btn-hero">
+                  <Button size="sm" className="btn-hero" onClick={handleAddComment}>
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Comment
                   </Button>
@@ -201,12 +353,12 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                 <label className="text-sm font-medium text-foreground">
                   Status
                 </label>
-                <Select defaultValue={task.status}>
+                <Select value={status} onValueChange={v => setStatus(v as 'not-started' | 'in-progress' | 'completed')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="not-started">Not Started</SelectItem>
                     <SelectItem value="in-progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
@@ -217,7 +369,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                 <label className="text-sm font-medium text-foreground">
                   Priority
                 </label>
-                <Select defaultValue={task.priority}>
+                <Select value={priority} onValueChange={v => setPriority(v as 'low' | 'medium' | 'high')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -228,6 +380,10 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
                   </SelectContent>
                 </Select>
               </div>
+              <Button onClick={handleSave} disabled={saving} className="w-full mt-4">
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              {saveError && <div className="text-red-500 text-sm mt-2">{saveError}</div>}
             </Card>
 
             {/* Task Info */}

@@ -62,7 +62,7 @@ export default function ProjectCreate() {
       formData.append('pdf', file);
 
       // Send to backend
-      const response = await fetch('http://localhost:5000/api/upload', {
+      const response = await fetch('http://localhost:3000/api/projects/upload', {
         method: 'POST',
         body: formData,
       });
