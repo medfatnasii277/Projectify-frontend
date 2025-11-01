@@ -3,10 +3,7 @@ import {
   CheckCircle, 
   Circle, 
   Calendar, 
-  MessageCircle, 
-  Edit3, 
-  Trash2,
-  MoreHorizontal
+  Trash2
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +45,7 @@ interface TaskItemProps {
 export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }: TaskItemProps) {
   const [isCompleted, setIsCompleted] = useState(task.status === 'completed');
   const [isHovered, setIsHovered] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const priorityColors = {
     low: 'border-l-secondary',
@@ -92,7 +90,7 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }:
         priorityColors[task.priority],
         isCompleted && "opacity-75"
       )}
-      onClick={onSelect}
+      onClick={() => !isDeleteDialogOpen && onSelect()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -124,15 +122,14 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }:
               "flex items-center gap-1 transition-opacity",
               isHovered ? "opacity-100" : "opacity-0"
             )}>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MessageCircle className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Edit3 className="w-4 h-4" />
-              </Button>
-              <AlertDialog>
+              <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </AlertDialogTrigger>
@@ -154,9 +151,6 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }:
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
             </div>
           </div>
 
