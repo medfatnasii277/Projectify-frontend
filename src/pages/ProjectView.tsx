@@ -10,7 +10,8 @@ import {
   Calendar,
   Filter,
   Search,
-  ArrowLeft
+  ArrowLeft,
+  X
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,8 @@ export default function ProjectView() {
   const [editDescription, setEditDescription] = useState('');
   const [editStatus, setEditStatus] = useState('pending');
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -88,6 +91,39 @@ export default function ProjectView() {
     if (response.ok) {
       const updated = await response.json();
       setProject(updated);
+    }
+  };
+
+  const handleStartAddTask = () => {
+    setIsAddingTask(true);
+    setNewTaskName('');
+  };
+
+  const handleCancelAddTask = () => {
+    setIsAddingTask(false);
+    setNewTaskName('');
+  };
+
+  const handleAddTask = async () => {
+    if (!id || !newTaskName.trim()) return;
+    try {
+      const response = await fetch(`http://localhost:3000/api/projects/${id}/mainTasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newTaskName.trim() })
+      });
+      if (response.ok) {
+        // Refetch the project data after adding task
+        const updatedResponse = await fetch(`http://localhost:3000/api/projects/${id}`);
+        if (updatedResponse.ok) {
+          const updated = await updatedResponse.json();
+          setProject(updated);
+          setIsAddingTask(false);
+          setNewTaskName('');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to add task:', error);
     }
   };
 
@@ -268,12 +304,37 @@ export default function ProjectView() {
           )}
           
           {/* Add Task Button */}
-          <button
-            className="w-full p-4 border-2 border-dashed border-border hover:border-primary/50 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:bg-primary/5"
-          >
-            <Plus className="w-5 h-5 mx-auto mb-2" />
-            Add a new task...
-          </button>
+          {isAddingTask ? (
+            <div className="w-full p-4 border-2 border-dashed border-primary/50 rounded-xl bg-primary/5">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter task name..."
+                  value={newTaskName}
+                  onChange={(e) => setNewTaskName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAddTask();
+                    if (e.key === 'Escape') handleCancelAddTask();
+                  }}
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleAddTask} disabled={!newTaskName.trim()}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleCancelAddTask}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleStartAddTask}
+              className="w-full p-4 border-2 border-dashed border-border hover:border-primary/50 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:bg-primary/5"
+            >
+              <Plus className="w-5 h-5 mx-auto mb-2" />
+              Add a new task...
+            </button>
+          )}
         </div>
       </Card>
 
