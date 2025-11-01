@@ -7,11 +7,21 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { 
   Select, 
@@ -84,6 +94,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
   const [loadingComments, setLoadingComments] = useState(false);
   const [subtaskError, setSubtaskError] = useState('');
   const [commentError, setCommentError] = useState('');
+  const [subtaskToDelete, setSubtaskToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     setDescription(task.description || '');
@@ -240,47 +251,41 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground">
-                  Subtasks ({subtasks.filter(s => s.status === 'completed').length}/{subtasks.length})
+                  Subtasks ({subtasks.length})
                 </h3>
-                <Progress value={subtasks.length ? (subtasks.filter(s => s.status === 'completed').length / subtasks.length) * 100 : 0} className="w-24 h-2" />
               </div>
               {subtaskError && <div className="text-red-500 text-sm">{subtaskError}</div>}
               <div className="space-y-3">
                 {subtasks.map((subtask, idx) => (
                   <Card key={idx} className="p-3">
                     <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={subtask.status === 'completed'}
-                        className="w-4 h-4 rounded border-border"
-                        onChange={async () => {
-                          // Toggle subtask status
-                          const newStatus = subtask.status === 'completed' ? 'not-started' : 'completed';
-                          try {
-                            const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks/${idx}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ status: newStatus }),
-                            });
-                            if (!res.ok) throw new Error('Failed to update subtask');
-                            const data = await res.json();
-                            const updated = [...subtasks];
-                            updated[idx] = data;
-                            setSubtasks(updated);
-                          } catch {
-                            setSubtaskError('Failed to update subtask');
-                          }
-                        }}
-                      />
-                      <span className={cn(
-                        "flex-1 text-sm",
-                        subtask.status === 'completed' ? "line-through text-muted-foreground" : "text-foreground"
-                      )}>
+                      <span className="flex-1 text-sm text-foreground">
                         {subtask.name}
                       </span>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRemoveSubtask(idx)}>
-                        <X className="w-3 h-3" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive">
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Subtask</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this subtask? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleRemoveSubtask(idx)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </Card>
                 ))}

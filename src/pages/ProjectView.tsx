@@ -81,6 +81,16 @@ export default function ProjectView() {
     }
   };
 
+  const handleTaskDelete = async () => {
+    // Refetch the project data after task deletion
+    if (!id) return;
+    const response = await fetch(`http://localhost:3000/api/projects/${id}`);
+    if (response.ok) {
+      const updated = await response.json();
+      setProject(updated);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Navigation */}
@@ -248,7 +258,10 @@ export default function ProjectView() {
               >
                 <TaskItem 
                   task={task} 
+                  projectId={id || ''}
+                  mainTaskIndex={parseInt(task.id)}
                   onSelect={() => setSelectedTaskId(task.id)}
+                  onDelete={handleTaskDelete}
                 />
               </div>
             ))

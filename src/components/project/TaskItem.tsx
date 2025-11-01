@@ -11,6 +11,17 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface TaskItemProps {
@@ -28,10 +39,13 @@ interface TaskItemProps {
     subtasksCompleted: number;
     subtasksTotal: number;
   };
+  projectId: string;
+  mainTaskIndex: number;
   onSelect: () => void;
+  onDelete?: () => void;
 }
 
-export function TaskItem({ task, onSelect }: TaskItemProps) {
+export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }: TaskItemProps) {
   const [isCompleted, setIsCompleted] = useState(task.status === 'completed');
   const [isHovered, setIsHovered] = useState(false);
 
@@ -50,6 +64,18 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
   const handleToggleComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsCompleted(!isCompleted);
+  };
+
+  const handleDelete = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/mainTasks/${mainTaskIndex}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete task');
+      if (onDelete) onDelete();
+    } catch (err: any) {
+      console.error('Failed to delete task:', err);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -104,9 +130,30 @@ export function TaskItem({ task, onSelect }: TaskItemProps) {
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <Edit3 className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this task? This action cannot be undone and will also delete all associated subtasks and comments.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
