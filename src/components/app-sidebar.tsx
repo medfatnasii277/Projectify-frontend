@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   FolderKanban, 
@@ -8,7 +8,8 @@ import {
   Plus,
   ChevronRight,
   Users,
-  Bell
+  Bell,
+  LogOut
 } from "lucide-react";
 
 import {
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const mainNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -43,8 +45,15 @@ const recentProjects = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-card">
@@ -124,20 +133,43 @@ export function AppSidebar() {
 
       <div className="mt-auto border-t border-border/50 p-3">
         {!isCollapsed ? (
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-            <div className="w-8 h-8 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center">
-              <Users className="w-4 h-4 text-white" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
+              <div className="w-8 h-8 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center">
+                <span className="text-xs font-bold text-white">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{user?.name || 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
+              </div>
+              <Settings className="w-4 h-4 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">Sarah Johnson</p>
-              <p className="text-xs text-muted-foreground truncate">Project Manager</p>
-            </div>
-            <Settings className="w-4 h-4 text-muted-foreground" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="sm" className="w-full p-2">
-            <Users className="w-4 h-4" />
-          </Button>
+          <div className="space-y-1">
+            <Button variant="ghost" size="sm" className="w-full p-2">
+              <Users className="w-4 h-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full p-2 hover:text-destructive hover:bg-destructive/10"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         )}
       </div>
 
