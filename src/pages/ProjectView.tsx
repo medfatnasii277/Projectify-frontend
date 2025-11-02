@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { format } from "date-fns";
 import { 
   Share2, 
   Download, 
@@ -11,14 +12,20 @@ import {
   Filter,
   Search,
   ArrowLeft,
-  X
+  X,
+  Edit3,
+  Check,
+  Clock,
+  Target,
+  PenTool
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { TaskItem } from "@/components/project/TaskItem";
-import { TaskDetailModal } from "@/components/project/TaskDetailModal";
+import { DatePicker } from '../components/ui/date-picker';
+import { TaskDetailModal } from '@/components/project/TaskDetailModal';
 import heroImage from "@/assets/hero-bg.jpg";
 
 type ViewMode = 'list' | 'board' | 'calendar';
@@ -34,6 +41,7 @@ export default function ProjectView() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (id) {
@@ -43,6 +51,7 @@ export default function ProjectView() {
           setProject(data);
           setEditDescription(data.description || '');
           setEditStatus(data.status || 'pending');
+          setDueDate(data.dueDate ? new Date(data.dueDate) : undefined);
         })
         .catch(() => setProject(null));
     }
@@ -75,7 +84,7 @@ export default function ProjectView() {
     const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: editDescription, status: editStatus })
+      body: JSON.stringify({ description: editDescription, status: editStatus, dueDate: dueDate ? dueDate.toISOString() : null })
     });
     if (response.ok) {
       const updated = await response.json();
@@ -140,48 +149,96 @@ export default function ProjectView() {
       </div>
 
       {/* Project Header */}
-      <Card className="p-8 card-elevated">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-4 flex-1">
-            <div>
-              <h1 className="text-3xl font-semibold text-foreground mb-2">
-                {project?.title || 'Untitled Project'}
-              </h1>
+      <Card className="p-6 card-elevated">
+        <div className="flex flex-col gap-6">
+          {/* Title and Actions Row */}
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2 group">
+                <h1 className="text-3xl font-semibold text-foreground">
+                  {project?.title || 'Untitled Project'}
+                </h1>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="opacity-60 group-hover:opacity-100 transition-all duration-200 h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary rounded-full"
+                >
+                  <PenTool className="w-4 h-4" />
+                </Button>
+              </div>
+              
               {isEditing ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={editDescription}
-                    onChange={e => setEditDescription(e.target.value)}
-                    className="w-full p-2 border rounded"
-                    placeholder="Project description..."
-                  />
-                  <select
-                    value={editStatus}
-                    onChange={e => setEditStatus(e.target.value)}
-                    className="p-2 border rounded"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="finished">Finished</option>
-                  </select>
-                  <button onClick={handleUpdate} className="mt-2 px-4 py-2 bg-primary text-white rounded">Submit</button>
-                  <button onClick={() => setIsEditing(false)} className="mt-2 ml-2 px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Description</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      className="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      placeholder="Project description..."
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">Due Date</label>
+                    <DatePicker
+                      date={dueDate}
+                      onDateChange={setDueDate}
+                      placeholder="Select due date"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button onClick={handleUpdate} size="sm" className="gap-2">
+                      <Check className="w-4 h-4" />
+                      Save Changes
+                    </Button>
+                    <Button onClick={() => setIsEditing(false)} variant="outline" size="sm" className="gap-2">
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <p className="text-muted-foreground">{project?.description || 'No description yet.'}</p>
-                  <span className="inline-block px-3 py-1 rounded bg-gray-200 text-sm">{project?.status || 'pending'}</span>
-                  <button onClick={() => setIsEditing(true)} className="ml-4 px-4 py-2 bg-primary text-white rounded">Edit</button>
+                <div className="space-y-3">
+                  <p className="text-muted-foreground leading-relaxed">
+                    {project?.description || 'No description yet.'}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-medium capitalize">
+                        {project?.status?.replace('-', ' ') || 'pending'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
             
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 ml-6">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Share2 className="w-4 h-4" />
+                Share
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Settings className="w-4 h-4" />
+                Settings
+              </Button>
+            </div>
+          </div>
+
+          {/* Progress and Due Date Row */}
+          <div className="flex items-center justify-between pt-4 border-t border-border/50">
+            <div className="flex items-center gap-8">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    Progress
-                  </span>
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Progress</span>
                   <span className="text-sm text-muted-foreground">
                     {/* Placeholder for task count */}
                   </span>
@@ -192,28 +249,14 @@ export default function ProjectView() {
                 />
               </div>
               
-              <div className="text-sm">
-                <span className="text-muted-foreground">Due:</span>
-                <span className="ml-2 text-foreground font-medium">
-                  {/* Placeholder for due date */}
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Due:</span>
+                <span className="text-sm font-medium text-foreground">
+                  {dueDate ? format(dueDate, 'MMM dd, yyyy') : 'No due date'}
                 </span>
               </div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </Button>
           </div>
         </div>
       </Card>
