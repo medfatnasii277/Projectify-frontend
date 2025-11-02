@@ -53,6 +53,7 @@ interface TaskDetailModalProps {
   };
   isOpen: boolean;
   onClose: () => void;
+  onUpdate?: () => void;
 }
 
 const mockSubtasks = [
@@ -80,7 +81,7 @@ const mockComments = [
   }
 ];
 
-export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps) {
+export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailModalProps) {
   const [description, setDescription] = useState(task.description || '');
   const [status, setStatus] = useState(task.status || 'not-started');
   const [priority, setPriority] = useState(task.priority || 'medium');
@@ -164,6 +165,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
       });
       if (!res.ok) throw new Error('Failed to save changes');
       setSaving(false);
+      onUpdate?.(); // Notify parent to refresh data
       onClose();
     } catch (err: any) {
       setSaveError(err.message || 'Error saving changes');
@@ -185,6 +187,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
       const data = await res.json();
       setSubtasks(data);
       setNewSubtask('');
+      onUpdate?.(); // Notify parent to refresh data
     } catch (err: any) {
       setSubtaskError('Failed to add subtask');
     }
@@ -200,6 +203,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
       if (!res.ok) throw new Error('Failed to remove subtask');
       const data = await res.json();
       setSubtasks(data);
+      onUpdate?.(); // Notify parent to refresh data
     } catch (err: any) {
       setSubtaskError('Failed to remove subtask');
     }
@@ -219,6 +223,7 @@ export function TaskDetailModal({ task, isOpen, onClose }: TaskDetailModalProps)
       const data = await res.json();
       setComments(data);
       setNewComment('');
+      onUpdate?.(); // Notify parent to refresh data
     } catch (err: any) {
       setCommentError('Failed to add comment');
     }

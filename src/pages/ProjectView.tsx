@@ -79,6 +79,11 @@ export default function ProjectView() {
     task.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Calculate progress
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(task => task.status === 'completed' || task.status === 'finished').length;
+  const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
   const handleUpdate = async () => {
     if (!id) return;
     const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
@@ -93,14 +98,25 @@ export default function ProjectView() {
     }
   };
 
+  const handleTaskUpdate = async () => {
+    // Refetch the project data after task updates
+    if (!id) return;
+    try {
+      const response = await fetch(`http://localhost:3000/api/projects/${id}`);
+      if (response.ok) {
+        const updated = await response.json();
+        setProject(updated);
+        // Update the due date state as well
+        setDueDate(updated.dueDate ? new Date(updated.dueDate) : undefined);
+      }
+    } catch (error) {
+      console.error('Failed to refresh project data:', error);
+    }
+  };
+
   const handleTaskDelete = async () => {
     // Refetch the project data after task deletion
-    if (!id) return;
-    const response = await fetch(`http://localhost:3000/api/projects/${id}`);
-    if (response.ok) {
-      const updated = await response.json();
-      setProject(updated);
-    }
+    await handleTaskUpdate();
   };
 
   const handleStartAddTask = () => {
@@ -240,11 +256,11 @@ export default function ProjectView() {
                   <Target className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-foreground">Progress</span>
                   <span className="text-sm text-muted-foreground">
-                    {/* Placeholder for task count */}
+                    {completedTasks}/{totalTasks} tasks
                   </span>
                 </div>
                 <Progress 
-                  value={0} // Placeholder
+                  value={progressPercentage}
                   className="w-64 h-2"
                 />
               </div>
@@ -341,6 +357,7 @@ export default function ProjectView() {
                   mainTaskIndex={parseInt(task.id)}
                   onSelect={() => setSelectedTaskId(task.id)}
                   onDelete={handleTaskDelete}
+                  onUpdate={handleTaskUpdate}
                 />
               </div>
             ))
@@ -387,6 +404,7 @@ export default function ProjectView() {
           task={selectedTask}
           isOpen={!!selectedTaskId}
           onClose={() => setSelectedTaskId(null)}
+          onUpdate={handleTaskUpdate}
         />
       )}
     </div>

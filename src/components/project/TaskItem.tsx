@@ -40,9 +40,10 @@ interface TaskItemProps {
   mainTaskIndex: number;
   onSelect: () => void;
   onDelete?: () => void;
+  onUpdate?: () => void;
 }
 
-export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }: TaskItemProps) {
+export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete, onUpdate }: TaskItemProps) {
   const [isCompleted, setIsCompleted] = useState(task.status === 'completed');
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -59,9 +60,26 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete }:
     completed: 'bg-secondary/10 text-secondary'
   };
 
-  const handleToggleComplete = (e: React.MouseEvent) => {
+  const handleToggleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsCompleted(!isCompleted);
+    const newStatus = isCompleted ? 'not-started' : 'completed';
+    try {
+      const res = await fetch(`/api/projects/${projectId}/mainTasks/${mainTaskIndex}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: task.name,
+          description: task.description,
+          status: newStatus,
+          priority: task.priority,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update task status');
+      setIsCompleted(!isCompleted);
+      if (onUpdate) onUpdate();
+    } catch (err: any) {
+      console.error('Failed to update task status:', err);
+    }
   };
 
   const handleDelete = async () => {
