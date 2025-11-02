@@ -23,9 +23,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { TaskItem } from "@/components/project/TaskItem";
 import { DatePicker } from '../components/ui/date-picker';
 import { TaskDetailModal } from '@/components/project/TaskDetailModal';
+import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-bg.jpg";
 
 type ViewMode = 'list' | 'board' | 'calendar';
@@ -81,8 +83,35 @@ export default function ProjectView() {
 
   // Calculate progress
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'completed' || task.status === 'finished').length;
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  console.log('Progress Debug:', { totalTasks, completedTasks, progressPercentage, projectStatus: project?.status, taskStatuses: tasks.map(t => ({ name: t.name, status: t.status })) });
+
+  // Auto-update project status when progress reaches 100%
+  useEffect(() => {
+    const updateProjectStatus = async () => {
+      if (progressPercentage === 100 && project?.status !== 'completed' && id && totalTasks > 0) {
+        console.log('Auto-updating project status to completed');
+        try {
+          const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed' })
+          });
+          if (response.ok) {
+            const updated = await response.json();
+            setProject(updated);
+            console.log('Project status updated successfully');
+          }
+        } catch (error) {
+          console.error('Failed to update project status:', error);
+        }
+      }
+    };
+
+    updateProjectStatus();
+  }, [progressPercentage, project?.status, id, totalTasks]);
 
   const handleUpdate = async () => {
     if (!id) return;
@@ -220,14 +249,6 @@ export default function ProjectView() {
                   <p className="text-muted-foreground leading-relaxed">
                     {project?.description || 'No description yet.'}
                   </p>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium capitalize">
-                        {project?.status?.replace('-', ' ') || 'pending'}
-                      </span>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -258,6 +279,15 @@ export default function ProjectView() {
                   <span className="text-sm text-muted-foreground">
                     {completedTasks}/{totalTasks} tasks
                   </span>
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "text-xs ml-2",
+                      progressPercentage === 100 ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                    )}
+                  >
+                    {progressPercentage === 100 ? 'Completed' : 'In Progress'}
+                  </Badge>
                 </div>
                 <Progress 
                   value={progressPercentage}
