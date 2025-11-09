@@ -7,6 +7,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import projectService from "@/services/projectService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,9 +131,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailM
     setLoadingComments(true);
     setCommentError('');
     try {
-      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/comments`);
-      if (!res.ok) throw new Error('Failed to fetch comments');
-      const data = await res.json();
+      const data = await projectService.getTaskComments(task.projectId, task.mainTaskIndex);
       setComments(data);
     } catch (err: any) {
       setCommentError('Failed to load comments');
@@ -153,17 +152,12 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailM
     setSaving(true);
     setSaveError('');
     try {
-      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: task.name,
-          description,
-          status,
-          priority,
-        }),
+      await projectService.updateMainTask(task.projectId, task.mainTaskIndex, {
+        title: task.name,
+        description,
+        status,
+        priority,
       });
-      if (!res.ok) throw new Error('Failed to save changes');
       setSaving(false);
       onUpdate?.(); // Notify parent to refresh data
       onClose();
@@ -178,13 +172,9 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailM
     if (!newSubtask.trim()) return;
     setSubtaskError('');
     try {
-      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newSubtask }),
+      const data = await projectService.addSubtask(task.projectId, task.mainTaskIndex, { 
+        title: newSubtask 
       });
-      if (!res.ok) throw new Error('Failed to add subtask');
-      const data = await res.json();
       setSubtasks(data);
       setNewSubtask('');
       onUpdate?.(); // Notify parent to refresh data
@@ -197,11 +187,7 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailM
   const handleRemoveSubtask = async (subtaskIdx: number) => {
     setSubtaskError('');
     try {
-      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/subtasks/${subtaskIdx}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error('Failed to remove subtask');
-      const data = await res.json();
+      const data = await projectService.deleteSubtask(task.projectId, task.mainTaskIndex, subtaskIdx);
       setSubtasks(data);
       onUpdate?.(); // Notify parent to refresh data
     } catch (err: any) {
@@ -214,13 +200,9 @@ export function TaskDetailModal({ task, isOpen, onClose, onUpdate }: TaskDetailM
     if (!newComment.trim()) return;
     setCommentError('');
     try {
-      const res = await fetch(`/api/projects/${task.projectId}/mainTasks/${task.mainTaskIndex}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author: 'User', content: newComment }),
+      const data = await projectService.addTaskComment(task.projectId, task.mainTaskIndex, { 
+        text: newComment 
       });
-      if (!res.ok) throw new Error('Failed to add comment');
-      const data = await res.json();
       setComments(data);
       setNewComment('');
       onUpdate?.(); // Notify parent to refresh data

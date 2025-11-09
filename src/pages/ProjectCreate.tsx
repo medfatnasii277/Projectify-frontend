@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Upload, FileText, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import projectService from "@/services/projectService";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import heroImage from "@/assets/hero-bg.jpg";
@@ -58,38 +59,24 @@ export default function ProjectCreate() {
     setUploadStatus('uploading');
 
     try {
-      const formData = new FormData();
-      formData.append('pdf', file);
+      // Send to backend using the project service
+      const project = await projectService.uploadPDF(file);
 
-      // Send to backend
-      const response = await fetch('http://localhost:3000/api/projects/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const result = await response.json();
-
-      if (response.ok && result.project && result.project._id) {
+      if (project && project._id) {
         setUploadStatus('success');
         toast({
           title: "Project created successfully!",
           description: `"${file.name}" has been processed and your project is ready.`,
         });
         setTimeout(() => {
-          navigate(`/project/${result.project._id}`);
+          navigate(`/project/${project._id}`);
         }, 1500);
-      } else {
-        setUploadStatus('error');
-        toast({
-          title: "Upload failed",
-          description: result.message || 'There was an error processing your file.',
-          variant: "destructive",
-        });
       }
-    } catch (error) {
+    } catch (error: any) {
       setUploadStatus('error');
       toast({
         title: "Upload failed",
-        description: 'There was an error processing your file.',
+        description: error.response?.data?.message || 'There was an error processing your file.',
         variant: "destructive",
       });
     }

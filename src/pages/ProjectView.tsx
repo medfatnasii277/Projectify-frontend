@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { TaskItem } from "@/components/project/TaskItem";
 import { DatePicker } from '../components/ui/date-picker';
 import { TaskDetailModal } from '@/components/project/TaskDetailModal';
+import projectService from "@/services/projectService";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assets/hero-bg.jpg";
 
@@ -47,8 +48,7 @@ export default function ProjectView() {
 
   useEffect(() => {
     if (id) {
-      fetch(`http://localhost:3000/api/projects/${id}`)
-        .then(res => res.json())
+      projectService.getProjectById(id)
         .then(data => {
           setProject(data);
           setEditDescription(data.description || '');
@@ -94,16 +94,9 @@ export default function ProjectView() {
       if (progressPercentage === 100 && project?.status !== 'completed' && id && totalTasks > 0) {
         console.log('Auto-updating project status to completed');
         try {
-          const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'completed' })
-          });
-          if (response.ok) {
-            const updated = await response.json();
-            setProject(updated);
-            console.log('Project status updated successfully');
-          }
+          const updated = await projectService.updateProject(id, { status: 'completed' });
+          setProject(updated);
+          console.log('Project status updated successfully');
         } catch (error) {
           console.error('Failed to update project status:', error);
         }
@@ -115,15 +108,16 @@ export default function ProjectView() {
 
   const handleUpdate = async () => {
     if (!id) return;
-    const response = await fetch(`http://localhost:3000/api/projects/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: editDescription, status: editStatus, dueDate: dueDate ? dueDate.toISOString() : null })
-    });
-    if (response.ok) {
-      const updated = await response.json();
+    try {
+      const updated = await projectService.updateProject(id, {
+        description: editDescription,
+        status: editStatus,
+        dueDate: dueDate ? dueDate.toISOString() : undefined,
+      });
       setProject(updated);
       setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update project:', error);
     }
   };
 
@@ -131,13 +125,10 @@ export default function ProjectView() {
     // Refetch the project data after task updates
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/projects/${id}`);
-      if (response.ok) {
-        const updated = await response.json();
-        setProject(updated);
-        // Update the due date state as well
-        setDueDate(updated.dueDate ? new Date(updated.dueDate) : undefined);
-      }
+      const updated = await projectService.getProjectById(id);
+      setProject(updated);
+      // Update the due date state as well
+      setDueDate(updated.dueDate ? new Date(updated.dueDate) : undefined);
     } catch (error) {
       console.error('Failed to refresh project data:', error);
     }
@@ -161,21 +152,15 @@ export default function ProjectView() {
   const handleAddTask = async () => {
     if (!id || !newTaskName.trim()) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/projects/${id}/mainTasks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newTaskName.trim() })
+      await projectService.addMainTask(id, { 
+        title: newTaskName.trim(),
+        description: '',
       });
-      if (response.ok) {
-        // Refetch the project data after adding task
-        const updatedResponse = await fetch(`http://localhost:3000/api/projects/${id}`);
-        if (updatedResponse.ok) {
-          const updated = await updatedResponse.json();
-          setProject(updated);
-          setIsAddingTask(false);
-          setNewTaskName('');
-        }
-      }
+      // Refetch the project data after adding task
+      const updated = await projectService.getProjectById(id);
+      setProject(updated);
+      setIsAddingTask(false);
+      setNewTaskName('');
     } catch (error) {
       console.error('Failed to add task:', error);
     }

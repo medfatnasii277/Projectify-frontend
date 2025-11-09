@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import projectService from "@/services/projectService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,25 +25,22 @@ export default function Projects() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/projects');
-      const data = await res.json();
-      setProjects(Array.isArray(data) ? data : []);
-    } catch (error) {
+      console.log('Fetching projects...');
+      const data = await projectService.getProjects();
+      console.log('Projects data:', data);
+      // Handle different response formats
+      const projectsList = Array.isArray(data) ? data : (data?.projects || data?.data?.projects || []);
+      setProjects(Array.isArray(projectsList) ? projectsList : []);
+    } catch (error: any) {
       console.error('Failed to fetch projects:', error);
     }
   };
 
   const handleDeleteProject = async (projectId: string) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/projects/${projectId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        // Refresh the projects list
-        fetchProjects();
-      } else {
-        console.error('Failed to delete project');
-      }
+      await projectService.deleteProject(projectId);
+      // Refresh the projects list
+      fetchProjects();
     } catch (error) {
       console.error('Error deleting project:', error);
     }

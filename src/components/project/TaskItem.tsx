@@ -8,6 +8,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import projectService from "@/services/projectService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,17 +65,12 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete, o
     e.stopPropagation();
     const newStatus = isCompleted ? 'not-started' : 'completed';
     try {
-      const res = await fetch(`/api/projects/${projectId}/mainTasks/${mainTaskIndex}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: task.name,
-          description: task.description,
-          status: newStatus,
-          priority: task.priority,
-        }),
+      await projectService.updateMainTask(projectId, mainTaskIndex, {
+        title: task.name,
+        description: task.description,
+        status: newStatus,
+        priority: task.priority,
       });
-      if (!res.ok) throw new Error('Failed to update task status');
       setIsCompleted(!isCompleted);
       if (onUpdate) onUpdate();
     } catch (err: any) {
@@ -84,10 +80,7 @@ export function TaskItem({ task, projectId, mainTaskIndex, onSelect, onDelete, o
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/mainTasks/${mainTaskIndex}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error('Failed to delete task');
+      await projectService.deleteMainTask(projectId, mainTaskIndex);
       if (onDelete) onDelete();
     } catch (err: any) {
       console.error('Failed to delete task:', err);
